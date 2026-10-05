@@ -432,7 +432,13 @@ class InnerDrawerState extends State<InnerDrawer>
     final Widget? invC = _invisibleCover();
 
     final Widget scaffoldChild = Stack(
-      children: <Widget?>[widget.scaffold, invC != null ? invC : null]
+      children: <Widget?>[
+        // While the drawer is open the scaffold is covered; exclude it here
+        // rather than BlockSemantics on the cover, which also hid the drawer.
+        ExcludeSemantics(
+            excluding: _controller.value != 1, child: widget.scaffold),
+        invC != null ? invC : null
+      ]
           .where((a) => a != null)
           .toList().cast<Widget>(),
     );
@@ -483,8 +489,7 @@ class InnerDrawerState extends State<InnerDrawer>
       color: _colorTransitionScaffold.evaluate(_controller),
     );
     if (_controller.value != 1.0 && !widget.tapScaffoldEnabled)
-      return BlockSemantics(
-        child: GestureDetector(
+      return GestureDetector(
           // On Android, the back button is used to dismiss a modal.
           excludeFromSemantics: defaultTargetPlatform == TargetPlatform.android,
           onTap: widget.onTapClose || !_swipe ? close : null,
@@ -492,7 +497,6 @@ class InnerDrawerState extends State<InnerDrawer>
             label: MaterialLocalizations.of(context).modalBarrierDismissLabel,
             child: container,
           ),
-        ),
       );
     return null;
   }
@@ -587,7 +591,12 @@ class InnerDrawerState extends State<InnerDrawer>
       child: Stack(
         alignment: _drawerInnerAlignment!,
         children: <Widget>[
-          FocusScope(node: _focusScopeNode, child: _animatedChild()),
+          // Closed (value == 1) drawer panels are off-screen; keep them out of
+          // the semantics tree so VoiceOver doesn't read hidden content.
+          ExcludeSemantics(
+            excluding: _controller.value == 1,
+            child: FocusScope(node: _focusScopeNode, child: _animatedChild()),
+          ),
           GestureDetector(
             key: _gestureDetectorKey,
             onTap: () {},
