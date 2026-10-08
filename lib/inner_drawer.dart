@@ -246,6 +246,17 @@ class InnerDrawerState extends State<InnerDrawer>
     return _initWidth;
   }
 
+  /// Every move goes through fling (a spring that ignores `duration`). Under
+  /// Reduce Motion (iOS) or "remove animations" (Android) speed it up 200x,
+  /// the same factor Flutter's own AnimationController.fling uses when
+  /// animations are disabled - which the iOS engine never signals for
+  /// Reduce Motion.
+  void _fling(double velocity) {
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) == true ||
+        View.maybeOf(context)?.platformDispatcher.accessibilityFeatures.reduceMotion == true;
+    _controller.fling(velocity: reduceMotion ? velocity * 200 : velocity);
+  }
+
   double get _velocity {
     return widget.velocity;
   }
@@ -328,10 +339,10 @@ class InnerDrawerState extends State<InnerDrawer>
       }
       switch (Directionality.of(context)) {
         case TextDirection.rtl:
-          _controller.fling(velocity: -visualVelocity);
+          _fling(-visualVelocity);
           break;
         case TextDirection.ltr:
-          _controller.fling(velocity: visualVelocity);
+          _fling(visualVelocity);
           break;
       }
     } else if (_controller.value < 0.5) {
@@ -343,12 +354,12 @@ class InnerDrawerState extends State<InnerDrawer>
 
   void open({InnerDrawerDirection? direction}) {
     if (direction != null) _position = direction;
-    _controller.fling(velocity: -_velocity);
+    _fling(-_velocity);
   }
 
   void close({InnerDrawerDirection? direction}) {
     if (direction != null) _position = direction;
-    _controller.fling(velocity: _velocity);
+    _fling(_velocity);
   }
 
   /// Open or Close InnerDrawer
